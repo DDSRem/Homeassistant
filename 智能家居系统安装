@@ -1,0 +1,104 @@
+#######################################Homeassistant,nodered,mqtt安装#######################################################
+
+mkdir -p /home/暂存/docker/Homeassistant/{homeassistant,mosquitto,nodered}
+mkdir -p /home/暂存/docker/Homeassistant/mosquitto/{config,data,log}
+mkdir -p /home/暂存/docker/Homeassistant/nodered/data
+cd /home/暂存/docker/Homeassistant
+chmod 777 -R nodered
+cd /home/暂存/docker/Homeassistant/mosquitto/config
+wget https://raw.githubusercontent.com/DDSRem/Homeassistant/main/mosquitto.conf
+
+
+cd /home/暂存/docker/Homeassistant
+nano docker-compose.yml
+
+
+version: '3.3'
+services:
+    homeassistant:
+        container_name: homeassistant
+        image: "homeassistant/home-assistant:stable"
+        volumes:
+            - /home/暂存/docker/Homeassistant/homeassistant/config:/config
+            - /etc/localtime:/etc/localtime:ro
+        restart: unless-stopped
+        privileged: true
+        network_mode: host
+    mosquitto:
+        container_name: mosquitto
+        ports:
+            - '1883:1883'
+            - '9001:9001'
+        volumes:
+            - /home/暂存/docker/Homeassistant/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+            - /home/暂存/docker/Homeassistant/mosquitto/data:/mosquitto/data
+            - /home/暂存/docker/Homeassistant/mosquitto/log:/mosquitto/log
+        image: eclipse-mosquitto
+    node-red:
+        container_name: nodered
+        ports:
+            - '1880:1880'
+        volumes:
+            - /home/暂存/docker/Homeassistant/nodered/data:/data
+        image: nodered/node-red
+
+
+docker-compose up -d
+
+
+
+docker exec -it mosquitto touch /mosquitto/config/pwfile.conf && \
+docker exec -it mosquitto mosquitto_passwd -b /mosquitto/config/pwfile.conf Rem lkh662519 && \
+echo "password_file /mosquitto/config/pwfile.conf" >> /home/暂存/docker/Homeassistant/mosquitto/config/mosquitto.conf
+docker-compose restart
+
+
+##################################################hacs安装##################################################################
+
+
+docker exec -it homeassistant /bin/bash
+wget -O - https://get.hacs.xyz | bash -
+exit
+docker-compose restart
+
+
+##################################################和风天气安装###############################################################
+
+
+cd /home/暂存/docker/Homeassistant/homeassistant/config/
+mkdir -p custom_components/HeWeather
+cd custom_components/HeWeather/
+curl -O https://raw.githubusercontent.com/morestart/HeWeather/More-than-0.63/sensor.py
+curl -O https://raw.githubusercontent.com/morestart/HeWeather/More-than-0.63/manifest.json
+
+
+sensor:
+  - platform: HeWeather
+    city:(杭州,hangzhou)
+    appkey: cf51c4e13ba149e3b23db55ea3822b39
+    options:
+      - fl
+      - tmp
+      - cond_txt
+      - wind_spd
+      - hum
+      - pcpn
+      - pres
+      - vis
+      - wind_sc
+      - aqi
+      - main
+      - qlty
+      - pm10
+      - pm25
+      - comf
+      - cw
+      - drsg
+      - flu
+      - sport
+      - trav
+      - uv
+      - wind_dir
+      - tmp_max
+      - tmp_min
+      - pop
